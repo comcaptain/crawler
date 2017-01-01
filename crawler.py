@@ -1,4 +1,5 @@
 from asyncio import Queue
+from configparser import ConfigParser
 from form import FormSubmitter
 from bs4 import BeautifulSoup
 import aiohttp
@@ -17,26 +18,33 @@ class Crawler:
         self.session = aiohttp.ClientSession(loop = loop)
         self.formSubmitter = FormSubmitter(self.session)
 
-    @asyncio.coroutine
-    def login(self, login_url, form_selector, parameters):
-        login_response = yield from self.formSubmitter.submit(
-            login_url=login_url, form_selector=form_selector, parameters=parameters, encoding=self.encoding)
-        html = yield from login_response.text(self.encoding)
-        soup = BeautifulSoup(html, "html.parser")
-        message = soup.select_one(".box.message").string
-        if message.find(u'欢迎您回来') != -1:
-            print("login successfully: " + message)
-            return True
+        self.config = ConfigParser()
+        self.config.read('auth.ini')
 
-        print("login failed, returned message is " + message)
-        return False
+    @asyncio.coroutine
+    def login(self):
+        login_url="http://www.sexinsex.net/bbs/index.php"
+        form_selector="#loginform"
+        parameters = {"username": self.config["login"]["username"], "password": self.config["login"]["password"]}
+
+        try:
+            login_response = yield from self.formSubmitter.submit(
+                login_url=login_url, form_selector=form_selector, parameters=parameters, encoding=self.encoding)
+            html = yield from login_response.text(self.encoding)
+            soup = BeautifulSoup(html, "html.parser")
+            message = soup.select_one(".box.message").get_text()
+            if message.find(u'欢迎您回来') != -1:
+                print("login successfully: " + message)
+                return True
+
+            print("login failed, returned message is " + message)
+            return False
+        finally:
+            yield from login_response.release()
 
     @asyncio.coroutine
     def crawl(self):
-        login_successful = yield from self.login(
-            login_url="http://www.sexinsex.net/bbs/index.php",
-            form_selector="#loginform",
-            parameters={"username":"aa", "password": "bbbb"})
+        login_successful = yield from self.login()
         if not login_successful:
             return False
         workers = [asyncio.Task(self.work()) for _ in range(self.maxTasks)]
