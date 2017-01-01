@@ -28,7 +28,7 @@ class LinkParser:
             for link in table.select("span[id^=thread_] > a[href]"):
                 absolute_url = urljoin(self.url, link["href"])
                 links.add(absolute_url)
-                print("got thread link: {}:{}".format(link.get_text(), absolute_url))
+                # print("got thread link: {}:{}".format(link.get_text(), absolute_url))
 
         # get other pages' link
         pages = self.soup.select_one(".pages")
@@ -38,6 +38,6 @@ class LinkParser:
                 continue
             absolute_url = urljoin(self.url, link["href"])
             links.add(absolute_url)
-            print("got other page's link: {}:{}".format(link.get_text(), absolute_url))
+            # print("got other page's link: {}:{}".format(link.get_text(), absolute_url))
 
         return links
