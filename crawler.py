@@ -6,6 +6,7 @@ import aiohttp
 import asyncio
 from link_parser import LinkParser
 import time
+from traffic_controller import TrafficController
 
 
 class Crawler:
@@ -23,10 +24,7 @@ class Crawler:
         self.config = ConfigParser()
         self.config.read('auth.ini')
 
-        self.minimum_delay = 1.0 / max_requests_in_one_second
-        self.last_fetch_time = None
-
-        self.request_sent = 0
+        self.traffic_controller = TrafficController(max_requests_in_one_second)
 
     @asyncio.coroutine
     def login(self):
@@ -34,9 +32,9 @@ class Crawler:
         form_selector="#loginform"
         parameters = {"username": self.config["login"]["username"], "password": self.config["login"]["password"]}
 
+        login_response = yield from self.formSubmitter.submit(
+            login_url=login_url, form_selector=form_selector, parameters=parameters, encoding=self.encoding)
         try:
-            login_response = yield from self.formSubmitter.submit(
-                login_url=login_url, form_selector=form_selector, parameters=parameters, encoding=self.encoding)
             html = yield from login_response.text(self.encoding)
             soup = BeautifulSoup(html, "html.parser")
             message = soup.select_one(".box.message").get_text()
@@ -48,24 +46,6 @@ class Crawler:
             return False
         finally:
             yield from login_response.release()
-
-    @asyncio.coroutine
-    def delay_http_request(self):
-        if self.last_fetch_time is None:
-            self.last_fetch_time = time.time()
-            return
-
-        while True:
-            time_passed_since_last_request = time.time() - self.last_fetch_time
-            if time_passed_since_last_request < self.minimum_delay:
-                wait_time = self.minimum_delay - time_passed_since_last_request
-                # print("Wait {:.2f} seconds to send next http request".format(wait_time))
-                yield from asyncio.sleep(wait_time)
-                # print("Waited {:.2f} seconds".format(wait_time))
-            else:
-                break
-
-        self.last_fetch_time = time.time()
 
     @asyncio.coroutine
     def crawl(self):
@@ -87,10 +67,9 @@ class Crawler:
 
     @asyncio.coroutine
     def fetch(self, url, max_redirect):
-        yield from self.delay_http_request()
+        yield from self.traffic_controller.wait_before_request()
 
-        self.request_sent += 1
-        print("{} request for page(max_redirect={}): {}".format(self.request_sent, max_redirect, url))
+        print("request for page(max_redirect={}): {}".format(max_redirect, url))
         response = yield from self.session.get(url, allow_redirects=False)
 
         try:
