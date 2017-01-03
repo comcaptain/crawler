@@ -1,37 +1,41 @@
 import traceback
 from asyncio import Queue
-from configparser import ConfigParser
 import asyncio
 
+from bean import CrawlTarget, CrawlConfig, LoginInformation
 from content_extractor import ContentExtractor
 from http_client import HttpClient
 from link_parser import LinkParser
 
 
 class Crawler:
-    def __init__(self, root_url, max_redirect, max_tasks, encoding, http_client: HttpClient):
-        self.max_tasks = max_tasks
-        self.max_redirect = max_redirect
-        self.encoding = encoding
+    def __init__(self, target: CrawlTarget, crawl_config: CrawlConfig, http_client: HttpClient, login_info: LoginInformation = None):
+        self.max_tasks = crawl_config.max_task
+        self.max_redirect = crawl_config.max_redirects
+        self.encoding = target.encoding
+        self.http_client = http_client
+        self.login_information = login_info
+
         self.q = Queue()
-        self.q.put_nowait((root_url, self.max_redirect))
+        for url in target.root_urls:
+            self.q.put_nowait((url, self.max_redirect))
+
         self.seen_urls = set()
 
-        self.http_client = http_client
-
-        self.config = ConfigParser()
-        self.config.read('auth.ini')
-
     @asyncio.coroutine
-    def login(self):
-        login_url="http://www.sexinsex.net/bbs/index.php"
-        form_selector="#loginform"
-        parameters = {"username": self.config["login"]["username"], "password": self.config["login"]["password"]}
-        soup = yield from self.http_client.submit(
-            login_url=login_url, form_selector=form_selector, parameters=parameters, encoding=self.encoding)
+    def login(self) -> bool:
+        # do not do login if login_information is absent
+        if not self.login_information:
+            return True
 
-        message = soup.select_one(".box.message").get_text()
-        if message.find(u'欢迎您回来') != -1:
+        soup = yield from self.http_client.submit(
+            form_url=self.login_information.form_url,
+            form_selector=self.login_information.form_selector,
+            parameters=self.login_information.parameters,
+            encoding=self.encoding)
+
+        message = soup.select_one(self.login_information.check_node_selector).get_text()
+        if message.find(self.login_information.check_text) != -1:
             print("login successfully: " + message)
             return True
         print("login failed, returned message is " + message)
@@ -42,6 +46,7 @@ class Crawler:
         login_successful = yield from self.login()
         if not login_successful:
             return False
+
         workers = [asyncio.Task(self.work()) for _ in range(self.max_tasks)]
         yield from self.q.join()
         for w in workers:

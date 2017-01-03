@@ -28,7 +28,7 @@ class ContentExtractor:
             soup = yield from self.http_client.get(other_page_url, self.encoding)
             soups.append(soup)
 
-        content = self.url + "\n"
+        content = self.url + "\n\n"
         for soup in soups:
             content += self.extract_one_page(soup) + "\n"
 

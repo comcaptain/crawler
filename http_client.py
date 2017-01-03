@@ -25,8 +25,8 @@ class HttpClient:
         return response
 
     @asyncio.coroutine
-    def submit(self, login_url, form_selector, encoding, parameters):
-        soup = yield from self.get(login_url, encoding)
+    def submit(self, form_url, form_selector, encoding, parameters):
+        soup = yield from self.get(form_url, encoding)
 
         # generate form parameters
         form_parameters = {}
@@ -38,7 +38,7 @@ class HttpClient:
         # get submit target url
         form = soup.select_one(form_selector)
         action = form["action"]
-        submit_url = urljoin(login_url, action)
+        submit_url = urljoin(form_url, action)
 
         # get submit method
         method = form.get("method", "GET").upper()

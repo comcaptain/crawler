@@ -1,5 +1,10 @@
 from typing import List, Dict
 
+import aiohttp
+
+from http_client import HttpClient
+from traffic_controller import TrafficController
+
 
 class CrawlTarget:
     def __init__(self, root_urls: List[str], encoding: str):
@@ -35,3 +40,5 @@ class CrawlConfig:
         self.max_redirects = max_redirects
         self.requests_per_second = requests_per_second
 
+    def generate_http_client(self, loop):
+        return HttpClient(aiohttp.ClientSession(loop=loop), TrafficController(self.requests_per_second))
