@@ -1,11 +1,10 @@
+import asyncio
 import traceback
 from asyncio import Queue
-import asyncio
-
+from sis.link_parser import LinkParser
 from bean import CrawlTarget, CrawlConfig, LoginInformation
-from content_extractor import ContentExtractor
 from http_client import HttpClient
-from link_parser import LinkParser
+from sis.content_extractor import ContentExtractor
 
 
 class Crawler:
