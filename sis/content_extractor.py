@@ -23,14 +23,18 @@ class ContentExtractor:
         seen_urls = {self.url}
         soups = [self.soup]
 
+        title = self.soup.select_one("title").get_text()
+        title = title[0:title.index(" - ")]
+
         while True:
             new_urls = self.get_urls_of_other_pages(soups[-1])
             has_new_url = False
-            for new_url in new_urls:
+            for page_number, new_url in new_urls:
                 if new_url in seen_urls:
                     continue
                 has_new_url = True
                 seen_urls.add(new_url)
+                print("send request to get page {} of {}".format(page_number, title))
                 soup = yield from self.http_client.get(new_url, self.encoding)
                 soups.append(soup)
             if not has_new_url:
@@ -39,9 +43,6 @@ class ContentExtractor:
         content = self.url + "\n\n"
         for soup in soups:
             content += self.extract_one_page(soup) + "\n"
-
-        title = self.soup.select_one("title").get_text()
-        title = title[0:title.index(" - ")]
         file_path = "d:/temp/{}.txt".format(title)
         f = open(file_path, mode="w", encoding="UTF-8")
         f.write(content)
@@ -64,7 +65,7 @@ class ContentExtractor:
             if link.get("class", None) is not None:
                 continue
             absolute_url = urljoin(self.url, link["href"])
-            links.append(absolute_url)
+            links.append((link.get_text(), absolute_url))
         return links
 
     @staticmethod
