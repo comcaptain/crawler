@@ -20,13 +20,21 @@ class ContentExtractor:
             return
         # yield from self.jump_to_author_only_page()
 
-        other_pages_urls = self.get_other_pages_urls()
-
+        seen_urls = {self.url}
         soups = [self.soup]
 
-        for other_page_url in other_pages_urls:
-            soup = yield from self.http_client.get(other_page_url, self.encoding)
-            soups.append(soup)
+        while True:
+            new_urls = self.get_urls_of_other_pages(soups[-1])
+            has_new_url = False
+            for new_url in new_urls:
+                if new_url in seen_urls:
+                    continue
+                has_new_url = True
+                seen_urls.add(new_url)
+                soup = yield from self.http_client.get(new_url, self.encoding)
+                soups.append(soup)
+            if not has_new_url:
+                break
 
         content = self.url + "\n\n"
         for soup in soups:
@@ -46,8 +54,8 @@ class ContentExtractor:
         absolute_url = urljoin(self.url, link["href"])
         self.soup = yield from self.http_client.get(absolute_url)
 
-    def get_other_pages_urls(self):
-        pages = self.soup.select_one(".pages")
+    def get_urls_of_other_pages(self, soup):
+        pages = soup.select_one(".pages")
         if not pages:
             return []
         links = []
