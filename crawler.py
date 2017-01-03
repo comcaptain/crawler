@@ -1,6 +1,9 @@
+import traceback
 from asyncio import Queue
 from configparser import ConfigParser
 import asyncio
+
+from content_extractor import ContentExtractor
 from http_client import HttpClient
 from link_parser import LinkParser
 
@@ -66,8 +69,13 @@ class Crawler:
             else:
                 html = yield from response.text(self.encoding)
                 links = LinkParser(html, url).parse_links()
+                if not links:
+                    yield from ContentExtractor(http_client=self.http_client, html=html, url=url, encoding=self.encoding).extract()
                 for link in links.difference(self.seen_urls):
                     self.q.put_nowait((link, self.max_redirect))
                 self.seen_urls.update(links)
+        except Exception as exp:
+            print("Error happendsing while crawing page {}: {}".format(url, exp))
+            traceback.print_exc()
         finally:
             response.release()
