@@ -11,7 +11,7 @@ class HttpClient:
         self.traffic_controller = traffic_controller
 
     @asyncio.coroutine
-    def get(self, url, encoding):
+    def get(self, url, encoding) -> BeautifulSoup:
         response = yield from self.get_raw_response(url)
         soup = yield from self._parse_response(response, encoding)
         return soup
