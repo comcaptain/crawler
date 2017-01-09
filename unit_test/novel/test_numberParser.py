@@ -26,3 +26,4 @@ class TestChineseNumberParser(TestCase):
         self.assertEqual(ChineseNumberParser("一万一千一百").parse_int(), 11100)
         self.assertEqual(ChineseNumberParser("一万一千一百一十").parse_int(), 11110)
         self.assertEqual(ChineseNumberParser("一万一千一百一十一").parse_int(), 11111)
+        self.assertEqual(ChineseNumberParser("９９９").parse_int(), 999)

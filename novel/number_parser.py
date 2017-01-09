@@ -3,7 +3,7 @@ import re
 
 class ChineseNumberParser:
 
-    _NUMBER_TRANSLATE_DICT = str.maketrans(u"一二三四五六七八九零", "1234567890")
+    _NUMBER_TRANSLATE_DICT = str.maketrans(u"０１２３４５６７８９一二三四五六七八九零", "01234567891234567890")
 
     _UNIT_POSITION_MAP = {u"十": 2, u"百": 3, u"千": 4, u"万": 5, u"亿": 9}
 
